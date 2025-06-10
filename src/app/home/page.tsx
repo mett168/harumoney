@@ -15,6 +15,7 @@ import { client } from "@/lib/client";
 import { supabase } from "@/lib/supabaseClient";
 import { useSession } from "@supabase/auth-helpers-react";
 import { getKSTDateString } from "@/lib/dateUtil";
+import Script from "next/script"; // ✅ 광고 스크립트 삽입을 위한 import 추가
 
 type NFTType = "nft300" | "nft3000" | "nft10000";
 
@@ -118,6 +119,25 @@ export default function HomePage() {
     <main className="w-full min-h-screen bg-[#f5f7fa] pt-0 pb-20">
       <TopBar icon={<Home size={20} className="text-gray-700" />} title="홈" />
       <div className="max-w-[500px] mx-auto px-3 pt-2 space-y-2">
+
+        {/* ✅ 구글 광고 코드 삽입 */}
+        <Script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4831216892677024"
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
+        <ins
+          className="adsbygoogle"
+          style={{ display: "block" }}
+          data-ad-client="ca-pub-4831216892677024"
+          data-ad-slot="1234567890" // 👉 실제 슬롯 ID로 교체 필요
+          data-ad-format="auto"
+          data-full-width-responsive="true"
+        />
+        <Script id="ads-init" strategy="afterInteractive">
+          {`(adsbygoogle = window.adsbygoogle || []).push({});`}
+        </Script>
 
         {/* 오늘의 리워드 */}
         <section className="bg-white rounded-xl shadow px-4 py-2">

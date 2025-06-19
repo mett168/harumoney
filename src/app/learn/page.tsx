@@ -11,7 +11,7 @@ export default function LearnPage() {
   return (
     <div className="min-h-screen bg-[#f5f7fa] pb-24">
       {/* ✅ 통일된 상단바 */}
-      <TopBar title="학습" />
+      <TopBar  />
 
       {/* 광고 */}
       <div className="mt-2 px-2">

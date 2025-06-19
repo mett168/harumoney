@@ -77,7 +77,7 @@ export default function MyPage() {
 
   return (
     <>
-      <TopBar title="마이페이지" showBack />
+      <TopBar />
       <main className="min-h-screen bg-[#f5f7fa] pb-16 w-full">
         <div className="px-4 pt-2 max-w-[500px] mx-auto">
 

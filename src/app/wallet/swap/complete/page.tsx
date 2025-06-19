@@ -8,7 +8,7 @@ export default function SwapCompletePage() {
 
   return (
     <div className="min-h-screen bg-white px-5 pt-5 pb-24 flex flex-col">
-      <TopBar title="교환 완료" showBack={false} />
+      <TopBar />
 
       <div className="flex flex-col items-center mt-24">
         <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mb-4">

@@ -12,7 +12,7 @@ export default function NftMainPage() {
   return (
     <>
       {/* ✅ TopBar는 항상 전체폭 */}
-      <TopBar title="NFT 관리" showBack />
+      <TopBar />
 
       {/* ✅ 홈과 동일하게 main은 전체폭, 내부 콘텐츠만 정렬 */}
       <main className="min-h-screen bg-[#f4f6f9] pb-20 w-full">

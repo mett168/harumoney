@@ -45,7 +45,7 @@ export default function NftInHistoryPage() {
 
   return (
     <>
-      <TopBar title="NFT 구매 내역" showBack onBack={() => router.push("/mypage")} />
+      <TopBar />
       <main className="p-4 max-w-md mx-auto bg-[#f5f7fa] min-h-screen pb-24">
         {loading ? (
           <p className="text-sm text-gray-500 text-center">불러오는 중...</p>

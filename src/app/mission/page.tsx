@@ -91,33 +91,63 @@ export default function MissionPage() {
     fetchStatusAndUser();
   }, [account]);
 
-  const handleMissionReward = async (type: string, title: string) => {
-    if (!user) return;
+const handleMissionReward = async (type: string, title: string) => {
+  if (!user) return;
 
-    const today = getKSTDateString();
-    const { error } = await supabase.from("daily_quests").upsert(
-      {
+  const today = getKSTDateString();
+
+  // ✅ 기존 기록 조회
+  const { data: existing, error: selectError } = await supabase
+    .from("daily_quests")
+    .select("id")
+    .eq("ref_code", user.ref_code)
+    .eq("date", today)
+    .eq("type", type)
+    .maybeSingle();
+
+  if (selectError) {
+    alert(`❌ ${title} 리워드 조회 실패: ${selectError.message}`);
+    return;
+  }
+
+  let saveError = null;
+
+  if (existing) {
+    // ✅ 있으면 update
+    const { error: updateError } = await supabase
+      .from("daily_quests")
+      .update({ status: "completed" })
+      .eq("id", existing.id);
+
+    saveError = updateError;
+  } else {
+    // ✅ 없으면 insert
+    const { error: insertError } = await supabase
+      .from("daily_quests")
+      .insert({
         ref_code: user.ref_code,
         date: today,
         type,
         status: "completed",
-      },
-      { onConflict: ["ref_code", "date", "type"] }
-    );
+      });
 
-    if (!error) {
-      await addPointToUser(user, 5, type, `${title} 보상`);
-      const total = await getUserTotalPoint(user.id);
-      setMyPoint(total);
-      setMissions((prev) =>
-        prev.map((m) =>
-          m.title === title ? { ...m, completed: true } : m
-        )
-      );
-    } else {
-      alert(`❌ ${title} 리워드 지급 실패: ${error.message}`);
-    }
-  };
+    saveError = insertError;
+  }
+
+  // ✅ 후속 처리
+  if (!saveError) {
+    await addPointToUser(user, 5, type, `${title} 보상`);
+    const total = await getUserTotalPoint(user.id);
+    setMyPoint(total);
+    setMissions((prev) =>
+      prev.map((m) =>
+        m.title === title ? { ...m, completed: true } : m
+      )
+    );
+  } else {
+    alert(`❌ ${title} 리워드 저장 실패: ${saveError.message}`);
+  }
+};
 
   return (
     <div className="min-h-screen bg-[#f5f7fa] pb-24">

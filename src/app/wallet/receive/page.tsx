@@ -16,7 +16,7 @@ export default function ReceivePage() {
 
   return (
     <div className="min-h-screen bg-white px-5 pt-5 pb-24">
-      <TopBar title="받기" showBack />
+      <TopBar />
 
       <section className="bg-white rounded-xl shadow mt-6 p-4 border">
         <h2 className="text-blue-600 font-semibold mb-1">나의 지갑 입금 주소</h2>

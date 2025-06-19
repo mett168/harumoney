@@ -43,7 +43,7 @@ export default function NftBurnHistoryPage() {
 
   return (
     <>
-      <TopBar title="NFT 해지 내역" showBack />
+      <TopBar />
 
       <main className="p-4 max-w-md mx-auto bg-[#f5f7fa] min-h-screen pb-24">
         {loading ? (

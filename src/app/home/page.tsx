@@ -118,32 +118,50 @@ export default function HomePage() {
     if (todayQuiz?.question) setQuiz(todayQuiz);
   };
 
-  const handleAnswer = async (option: string) => {
-    if (!quiz || isCorrect === true) return;
-    setSelectedAnswer(option);
-    const correct = option === quiz.correct_answer;
-    setIsCorrect(correct);
-    if (correct) {
- await supabase.from("daily_quests").upsert(
-  [
-    {
-      ref_code: refCode,
-      name,
-      date: getKSTDateString(),
-      type: "quiz",
-      status: "completed",
-    },
-  ],
-  {
-    onConflict: "ref_code,date,type", // ✅ 문자열 하나
-  }
-);
+const handleAnswer = async (option: string) => {
+  if (!quiz || isCorrect === true) return;
 
+  setSelectedAnswer(option);
+  const correct = option === quiz.correct_answer;
+  setIsCorrect(correct);
 
-      setQuizDoneToday(true);
-      await fetchDailyQuestStatus();
+  if (correct) {
+    const today = getKSTDateString();
+
+    // ✅ 이미 퀘스트가 있는지 확인
+    const { data: existing, error } = await supabase
+      .from("daily_quests")
+      .select("id")
+      .eq("ref_code", refCode)
+      .eq("date", today)
+      .eq("type", "quiz")
+      .maybeSingle();
+
+    if (existing) {
+      // ✅ 있다면 update
+      await supabase
+        .from("daily_quests")
+        .update({
+          name,
+          status: "completed",
+        })
+        .eq("id", existing.id);
+    } else {
+      // ✅ 없다면 insert
+      await supabase.from("daily_quests").insert({
+        ref_code: refCode,
+        name,
+        date: today,
+        type: "quiz",
+        status: "completed",
+      });
     }
-  };
+
+    setQuizDoneToday(true);
+    await fetchDailyQuestStatus();
+  }
+};
+
 
   const fetchCheckinHistory = async () => {
     const today = getKSTDateString();
@@ -157,26 +175,44 @@ export default function HomePage() {
     setCheckinDoneToday(dates.includes(today));
   };
 
-  const handleCheckin = async () => {
-    if (checkinDoneToday) return;
- await supabase.from("daily_quests").upsert(
-  [
-    {
+const handleCheckin = async () => {
+  if (checkinDoneToday) return;
+
+  const today = getKSTDateString();
+
+  // ✅ 기존 출석 기록이 있는지 확인
+  const { data: existing, error } = await supabase
+    .from("daily_quests")
+    .select("id")
+    .eq("ref_code", refCode)
+    .eq("date", today)
+    .eq("type", "checkin")
+    .maybeSingle();
+
+  if (existing) {
+    // ✅ 있다면 update
+    await supabase
+      .from("daily_quests")
+      .update({
+        name,
+        status: "completed",
+      })
+      .eq("id", existing.id);
+  } else {
+    // ✅ 없다면 insert
+    await supabase.from("daily_quests").insert({
       ref_code: refCode,
       name,
-      date: getKSTDateString(),
-      type: "quiz",
+      date: today,
+      type: "checkin",
       status: "completed",
-    },
-  ],
-  {
-    onConflict: "ref_code,date,type", // ✅ 문자열 하나
+    });
   }
-);
-    setCheckinDoneToday(true);
-    setCheckinHistory((prev) => [...prev, getKSTDateString()]);
-    await fetchDailyQuestStatus();
-  };
+
+  setCheckinDoneToday(true);
+  setCheckinHistory((prev) => [...prev, today]);
+  await fetchDailyQuestStatus();
+};
 
   useEffect(() => {
     if (account && !balanceCalled.current) {
@@ -193,36 +229,33 @@ export default function HomePage() {
   }, [account]);
 
   return (
-    <main className="w-full min-h-screen bg-[#f5f7fa] pt-0 pb-20">
-      <TopBar   />
-      <div className="max-w-[500px] mx-auto px-3 pt-2 space-y-4">
+  <main className="w-full min-h-screen bg-[#f5f7fa] pt-0 pb-20">
+  <TopBar />
+      <div className="max-w-[500px] mx-auto px-3 pt-2 space-y-2">
         <div className="w-full rounded-xl overflow-hidden shadow border bg-white">
           <img src="/ads/ad1.png" alt="광고" className="w-full h-24 object-cover" />
         </div>
 
-        <section className="bg-white rounded-xl shadow border px-5 py-4">
-          <h3 className="text-sm font-bold text-gray-800 mb-1">일일 퀘스트</h3>
+        <section className="bg-white rounded-2xl shadow-lg border border-gray-100 px-5 py-5">
+          <h3 className="text-sm font-bold text-gray-800 mb-2">일일 퀘스트</h3>
           <div className="relative w-full bg-gray-200 h-5 rounded-full overflow-hidden">
             <div className="absolute top-0 left-0 h-full bg-blue-500 rounded-full transition-all duration-500" style={{ width: `${questProgress}%` }}></div>
           </div>
           <div className="mt-2 flex justify-center">
-            <span className="bg-blue-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
-              {questProgress}% 달성
-            </span>
+            <span className="bg-blue-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">{questProgress}% 달성</span>
           </div>
         </section>
 
         {quiz && (
-          <section className="bg-white rounded-xl shadow border px-5 py-6">
-            <h3 className="text-sm font-bold text-blue-600 mb-2">데일리 퀴즈</h3>
-            <p className="text-base font-semibold text-gray-900 mb-4">{quiz.question}</p>
-            <div className="space-y-3">
-              {[quiz.option_1, quiz.option_2, quiz.option_3].map((option, idx) => {
+          <section className="bg-white rounded-2xl shadow-lg border border-gray-100 px-5 py-6">
+            <h3 className="text-base text-blue-500 font-bold mb-1">데일리 퀴즈</h3>
+            <p className="text-xl font-bold text-gray-900 mt-2 text-left">{quiz.question}</p>
+            <div className="space-y-3 mt-6">
+              {[quiz.option_1, quiz.option_2, quiz.option_3].map((option: string, idx: number) => {
                 const isSelected = selectedAnswer === option;
                 const isAnswer = quiz.correct_answer === option;
                 let buttonClass = "bg-gray-100 text-gray-800 border border-gray-200";
                 let icon = "⬜️";
-
                 if (selectedAnswer) {
                   if (option === quiz.correct_answer) {
                     buttonClass = "bg-green-100 border-green-500 text-green-700";
@@ -232,41 +265,52 @@ export default function HomePage() {
                     icon = "❌";
                   }
                 }
-
                 return (
                   <button
                     key={idx}
                     onClick={() => handleAnswer(option)}
                     disabled={isCorrect === true}
-                    className={`w-full flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium shadow-sm transition-all duration-300 ${buttonClass}`}
+                    className={`w-full flex items-center justify-between rounded-xl px-4 py-4 text-base font-medium shadow-sm transition-all duration-300 ${buttonClass}`}
                   >
                     <span>{option}</span>
-                    <span>{icon}</span>
+                    <span className="text-xl">{icon}</span>
                   </button>
                 );
               })}
             </div>
+            {selectedAnswer && (
+              <div className="mt-4 text-center text-base font-semibold">
+                {isCorrect ? (
+                  <span className="text-green-600">정답입니다! 🎉</span>
+                ) : (
+                  <div>
+                    <p className="text-red-600 font-semibold">오답이에요</p>
+                    <p className="text-red-600 text-sm mt-1">다시 선택해주세요</p>
+                  </div>
+                )}
+              </div>
+            )}
           </section>
         )}
 
-        <section className="bg-white rounded-xl shadow border px-5 py-6">
-          <h3 className="text-sm font-semibold text-blue-600 mb-2">📅 출석체크</h3>
+        <section className="bg-white rounded-2xl shadow-lg border border-gray-100 px-5 py-6">
+          <h3 className="text-sm font-semibold text-blue-600 mb-1">📅 출석체크</h3>
+          <p className="text-sm text-gray-700 mb-4">10일 동안 매일 출석 체크하고 리워드 챙겨가세요!</p>
           <div className="grid grid-cols-5 gap-3 mb-4">
             {[...Array(10)].map((_, idx) => {
               const checked = idx < checkinHistory.length;
               return (
-                <div key={idx} className="flex flex-col items-center">
+                <div key={idx} className="flex flex-col items-center justify-center w-full aspect-square">
                   <img
                     src={checked ? "/icons/check_active.png" : "/icons/check_inactive.png"}
                     alt="check"
-                    className="w-8 h-8 mb-1"
+                    className="w-10 h-10 mb-1"
                   />
                   <div className="text-[11px] text-gray-700">{idx + 1}일차</div>
                 </div>
               );
             })}
           </div>
-
           {!checkinDoneToday ? (
             <button
               onClick={handleCheckin}
@@ -276,7 +320,7 @@ export default function HomePage() {
             </button>
           ) : (
             <div className="text-center text-green-600 font-semibold">
-              오늘 출석 완료! <span className="text-sm text-blue-600">+10포인트</span>
+              오늘 출석 완료!<span className="text-sm text-blue-600"> +10포인트</span>
             </div>
           )}
         </section>

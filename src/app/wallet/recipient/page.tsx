@@ -25,7 +25,7 @@ export default function RecipientPage() {
 
   return (
     <div className="min-h-screen bg-white px-5 pt-5 pb-24 flex flex-col">
-      <TopBar title="보내기" showBack />
+      <TopBar />
 
       <input
         value={address}

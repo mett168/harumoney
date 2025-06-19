@@ -28,7 +28,7 @@ export default function CopyTradingPage() {
 
   return (
     <div className="min-h-screen bg-[#f5f7fa] pb-24">
-      <TopBar title="미션 상세" showBack />
+      <TopBar />
 
       <div className="text-center mt-6 px-4">
         <p className="inline-block bg-white px-4 py-1 rounded-full text-xs text-gray-500 shadow-md">
@@ -55,7 +55,7 @@ export default function CopyTradingPage() {
                 }`}>
                   {pass.name}
                 </span>
-                <span className="text-[16px] font-bold text-gray-800">{pass.price}</span>
+                <span className="text-[16px] font-bold text-gray-800"></span>
               </div>
               <ul className="text-sm text-gray-700 space-y-1 mt-2">
                 <li>✔ 모든 콘텐츠 열람 가능</li>

@@ -17,7 +17,7 @@ export default function SwapPage() {
 
   return (
     <div className="min-h-screen bg-white pb-24">
-      <TopBar title="포인트 교환" showBack />
+      <TopBar />
 
       <div className="px-4 pt-4">
         <div className="text-xs text-gray-500 mb-2">

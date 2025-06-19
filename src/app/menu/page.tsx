@@ -72,7 +72,7 @@ export default function MyPage() {
   return (
     <>
       {/* ✅ 통일된 상단바 적용 */}
-      <TopBar title="마이페이지" point={myPoint} />
+      <TopBar  />
 
       {/* 광고 배너 */}
       <div className="mt-2">

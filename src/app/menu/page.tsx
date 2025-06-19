@@ -1,12 +1,13 @@
-"use client";
+'use client';
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useActiveAccount, useActiveWallet } from "thirdweb/react";
 import BottomNav from "@/components/BottomNav";
-import TopBar from "@/components/TopBar";
 import { supabase } from "@/lib/supabaseClient";
 import Image from "next/image";
+import AdBanner from "@/components/AdBanner";
+import TopBar from "@/components/TopBar"; // ✅ 추가
 
 export default function MyPage() {
   const account = useActiveAccount();
@@ -17,6 +18,7 @@ export default function MyPage() {
   const [editingField, setEditingField] = useState<"name" | "phone" | null>(null);
   const [nameInput, setNameInput] = useState("");
   const [phoneInput, setPhoneInput] = useState("");
+  const [myPoint, setMyPoint] = useState(0);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -24,7 +26,7 @@ export default function MyPage() {
 
       const { data: user, error } = await supabase
         .from("users")
-        .select("name, phone, email, created_at, ref_by, joined_at")
+        .select("name, phone, email, created_at, ref_by, joined_at, point")
         .eq("wallet_address", account.address.toLowerCase())
         .maybeSingle();
 
@@ -40,10 +42,8 @@ export default function MyPage() {
         refName = refUser?.name || null;
       }
 
-      setUserData({
-        ...user,
-        ref_by_name: refName,
-      });
+      setUserData({ ...user, ref_by_name: refName });
+      setMyPoint(user.point || 0);
     };
 
     fetchUserData();
@@ -61,12 +61,6 @@ export default function MyPage() {
     }
   };
 
-  const handleCopy = () => {
-    if (!account?.address) return;
-    navigator.clipboard.writeText(account.address);
-    alert("주소가 복사되었습니다.");
-  };
-
   if (!account) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-[#f5f7fa]">
@@ -77,59 +71,18 @@ export default function MyPage() {
 
   return (
     <>
-      <TopBar title="마이페이지" showBack />
+      {/* ✅ 통일된 상단바 적용 */}
+      <TopBar title="마이페이지" point={myPoint} />
+
+      {/* 광고 배너 */}
+      <div className="mt-2">
+        <AdBanner />
+      </div>
+
       <main className="min-h-screen bg-[#f5f7fa] pb-16 w-full">
         <div className="px-4 pt-2 max-w-[500px] mx-auto">
 
-          {/* ✅ 지갑 입금 주소 */}
-          <section className="mb-4 bg-white p-4 rounded-xl shadow">
-            <h2 className="text-blue-600 font-semibold mb-2">나의 지갑 입금 주소</h2>
-            <p className="text-sm break-all">{account.address}</p>
-            <p className="text-xs text-gray-500 mt-1">
-              ※ 해당 주소는 POLYGON 체인의 USDT 입금만 지원됩니다.
-            </p>
-            <button
-              className="mt-2 w-full bg-blue-100 text-blue-700 py-1 rounded text-sm font-semibold"
-              onClick={handleCopy}
-            >
-              📋 주소 복사하기
-            </button>
-          </section>
-
-          {/* ✅ 코인 자산 */}
-          <section className="mb-4 bg-white p-4 rounded-xl shadow">
-            <h2 className="text-blue-600 font-semibold mb-2">나의 코인 자산</h2>
-            <div className="flex justify-between items-center">
-              <span className="font-semibold">Tether</span>
-              <span>0.00 USDT</span>
-            </div>
-            <button
-              className="mt-2 w-full bg-blue-600 text-white py-1 rounded text-sm font-semibold"
-              onClick={() => router.push("/withdraw")}
-            >
-              출금하기
-            </button>
-          </section>
-
-          {/* ✅ NFT 자산 */}
-          <section className="mb-4 bg-white p-4 rounded-xl shadow">
-            <h2 className="text-blue-600 font-semibold mb-2">나의 NFT 자산</h2>
-            {[
-              { name: "SNOWBOT 300", image: "/snowbot300.png", amount: 0 },
-              { name: "SNOWBOT 3000", image: "/snowbot3000.png", amount: 0 },
-              { name: "SNOWBOT 10000", image: "/snowbot10000.png", amount: 0 },
-            ].map((nft, idx) => (
-              <div key={idx} className="flex items-center gap-3 mt-2">
-                <Image src={nft.image} alt={nft.name} width={50} height={50} className="rounded" />
-                <div>
-                  <p className="font-bold">{nft.name}</p>
-                  <p className="text-sm text-gray-500">보유 수량: {nft.amount}개</p>
-                </div>
-              </div>
-            ))}
-          </section>
-
-          {/* 계정관리 */}
+          {/* ✅ 계정관리 */}
           <section className="mb-2">
             <h2 className="text-md font-semibold text-gray-700 mb-1 pl-2">계정관리</h2>
             <div className="bg-white rounded-xl shadow border text-sm divide-y divide-gray-200">
@@ -245,7 +198,7 @@ export default function MyPage() {
             </div>
           </section>
 
-          {/* 내역관리 */}
+          {/* ✅ 내역관리 */}
           <section className="mb-2">
             <h2 className="text-md font-semibold text-gray-700 mb-1 pl-2">내역관리</h2>
             <div className="bg-white rounded-xl shadow border text-sm divide-y divide-gray-200">
@@ -267,7 +220,7 @@ export default function MyPage() {
             </div>
           </section>
 
-          {/* 문의 */}
+          {/* ✅ 문의 */}
           <section className="space-y-4 mb-2">
             <a
               href="http://pf.kakao.com/_rxaxmGn/chat"
@@ -283,7 +236,7 @@ export default function MyPage() {
             </a>
           </section>
 
-          {/* 로그아웃 */}
+          {/* ✅ 로그아웃 */}
           <button
             onClick={handleLogout}
             className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold mb-4"

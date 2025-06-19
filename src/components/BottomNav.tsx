@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ListChecks, BookOpenCheck, Menu } from "lucide-react"; // 아이콘 변경
+import {
+  Home,
+  ListChecks,
+  BookOpenCheck,
+  Menu,
+  Wallet, // ✅ 지갑 아이콘 추가
+} from "lucide-react";
 
 export default function BottomNav() {
   const pathname = usePathname();
@@ -28,11 +34,17 @@ export default function BottomNav() {
             <span className={isActive("/learn") ? "text-blue-600" : "text-gray-400"}>학습</span>
           </Link>
 
+                    {/* ✅ 지갑 추가 */}
+          <Link href="/wallet" className="flex flex-col items-center">
+            <Wallet size={20} className={isActive("/wallet") ? "text-blue-600" : "text-gray-400"} />
+            <span className={isActive("/wallet") ? "text-blue-600" : "text-gray-400"}>교환</span>
+          </Link>
+
           <Link href="/menu" className="flex flex-col items-center">
             <Menu size={20} className={isActive("/menu") ? "text-blue-600" : "text-gray-400"} />
             <span className={isActive("/menu") ? "text-blue-600" : "text-gray-400"}>메뉴</span>
           </Link>
-          
+
         </div>
       </div>
     </div>

@@ -17,9 +17,6 @@ type User = {
   wallet_address: string;
   ref_code: string;
   created_at: string;
-  nft300?: number;
-  nft3000?: number;
-  nft10000?: number;
   usdt?: string;
   matic?: string;
 };
@@ -40,25 +37,6 @@ export default function UserListPage() {
         console.error("❌ 유저 조회 실패:", userError?.message);
         return;
       }
-
-      const { data: nftData, error: nftError } = await supabase
-        .from("nfts")
-        .select("wallet_address, nft300, nft3000, nft10000");
-
-      if (nftError || !nftData) {
-        console.error("❌ NFT 조회 실패:", nftError?.message);
-        return;
-      }
-
-      const nftMap: Record<string, { nft300: number; nft3000: number; nft10000: number }> = {};
-      nftData.forEach((item) => {
-        const key = item.wallet_address.toLowerCase();
-        nftMap[key] = {
-          nft300: item.nft300 || 0,
-          nft3000: item.nft3000 || 0,
-          nft10000: item.nft10000 || 0,
-        };
-      });
 
       const enrichedUsers: User[] = await Promise.all(
         userData.map(async (user) => {
@@ -88,9 +66,6 @@ export default function UserListPage() {
 
           return {
             ...user,
-            nft300: nftMap[wallet]?.nft300 || 0,
-            nft3000: nftMap[wallet]?.nft3000 || 0,
-            nft10000: nftMap[wallet]?.nft10000 || 0,
             usdt,
             matic,
           };
@@ -118,9 +93,6 @@ export default function UserListPage() {
               <th className="p-2 border">추천코드</th>
               <th className="p-2 border w-[240px]">지갑주소</th>
               <th className="p-2 border">가입일</th>
-              <th className="p-2 border">NFT300</th>
-              <th className="p-2 border">NFT3000</th>
-              <th className="p-2 border">NFT10000</th>
               <th className="p-2 border">USDT</th>
               <th className="p-2 border">POL</th>
               <th className="p-2 border">기능</th>
@@ -134,17 +106,12 @@ export default function UserListPage() {
                 <td className="p-2 border">{u.ref_code || "-"}</td>
                 <td className="p-2 border font-mono text-xs truncate max-w-[240px]">{u.wallet_address}</td>
                 <td className="p-2 border">{new Date(u.created_at).toLocaleDateString("ko-KR")}</td>
-                <td className="p-2 border">{u.nft300}</td>
-                <td className="p-2 border">{u.nft3000}</td>
-                <td className="p-2 border">{u.nft10000}</td>
                 <td className="p-2 border">{u.usdt}</td>
                 <td className="p-2 border">{u.matic}</td>
                 <td className="p-2 border space-y-1">
                   <button
-                    onClick={() => router.push(`/admin/nft-transfers/${u.ref_code}`)}
                     className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
                   >
-                    NFT 내역
                   </button>
                   <br />
                   <button

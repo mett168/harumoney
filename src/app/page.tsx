@@ -22,7 +22,7 @@ useEffect(() => {
   setCalled(true);
 
   // ✅ localStorage에서 추천 코드 가져오기
-  let refBy = "SW10100";
+  let refBy = "HM10000";
   if (typeof window !== "undefined") {
     const savedRef = localStorage.getItem("ref_code");
     if (savedRef) {
@@ -72,7 +72,7 @@ useEffect(() => {
   return (
     <>
       <Head>
-        <title>SMW01 스마트 월렛</title>
+        <title>HaruMoney</title>
       </Head>
 
       <main className="min-h-screen flex flex-col justify-between bg-[#f8fafc] px-4 py-6 max-w-md mx-auto text-center">
@@ -80,7 +80,7 @@ useEffect(() => {
           <section className="w-full mb-6">
             <div className="p-4">
               <p className="text-[16px] font-bold text-left text-[#4d4e4f]">눈덩이처럼 불어나는 나의 자산</p>
-              <h1 className="text-[16px] font-bold text-left text-[#4d4e4f]">SNOWWALLET</h1>
+              <h1 className="text-[16px] font-bold text-left text-[#4d4e4f]">HARUMONEY</h1>
             </div>
           </section>
 

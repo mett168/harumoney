@@ -34,12 +34,6 @@ export default function BottomNav() {
             <span className={isActive("/learn") ? "text-blue-600" : "text-gray-400"}>학습</span>
           </Link>
 
-                    {/* ✅ 지갑 추가 */}
-          <Link href="/wallet" className="flex flex-col items-center">
-            <Wallet size={20} className={isActive("/wallet") ? "text-blue-600" : "text-gray-400"} />
-            <span className={isActive("/wallet") ? "text-blue-600" : "text-gray-400"}>교환</span>
-          </Link>
-
           <Link href="/menu" className="flex flex-col items-center">
             <Menu size={20} className={isActive("/menu") ? "text-blue-600" : "text-gray-400"} />
             <span className={isActive("/menu") ? "text-blue-600" : "text-gray-400"}>메뉴</span>

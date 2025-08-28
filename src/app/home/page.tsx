@@ -1,331 +1,261 @@
-"use client";
+'use client';
 
-import { useEffect, useState, useMemo, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { useActiveAccount } from "thirdweb/react";
-import { getContract } from "thirdweb";
-import { balanceOf } from "thirdweb/extensions/erc20";
-import { polygon } from "thirdweb/chains";
-import { Home } from "lucide-react";
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useActiveAccount } from 'thirdweb/react';
+import { getContract } from 'thirdweb';
+import { balanceOf } from 'thirdweb/extensions/erc20';
+import { polygon } from 'thirdweb/chains';
 
-import TopBar from "@/components/TopBar";
-import BottomNav from "@/components/BottomNav";
-import { client } from "@/lib/client";
-import { supabase } from "@/lib/supabaseClient";
-import { getKSTDateString } from "@/lib/dateUtil";
+import TopBar from '@/components/TopBar';
+import AdBanner from '@/components/AdBanner';
+import BottomNav from '@/components/BottomNav';
+import TodayMoneyCard from '@/components/TodayMoneyCard';
+import { client } from '@/lib/client';
+import { supabase } from '@/lib/supabaseClient';
+import { getKSTISOString } from '@/lib/dateUtil';
 
-export default function HomePage() {
+const USDT_ADDRESS = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F';
+
+// DB에서 읽는 행 타입 (컬럼명 주의: total_amount)
+type RTStatus = 'pending' | 'sent' | 'failed' | 'success';
+type RewardRow = {
+  total_amount: number | null;
+  status: RTStatus;
+};
+
+// 패스 최소 필드
+type PassRow = {
+  price_usdt: number | null;
+  pass_code?: string | null;
+  is_active?: boolean | null;
+  activated_at?: string | null;
+};
+
+export default function WalletPage() {
   const account = useActiveAccount();
-  const address = account?.address?.toLowerCase() || "0x0000000000000000000000000000000000000000";
   const router = useRouter();
-  const balanceCalled = useRef(false);
 
-  const [usdtBalance, setUsdtBalance] = useState("조회 중...");
-  const [nickname, setNickname] = useState("");
-  const [name, setName] = useState("");
-  const [refCode, setRefCode] = useState("");
-  const [investReward, setInvestReward] = useState(0);
-  const [referralReward, setReferralReward] = useState(0);
-  const [quiz, setQuiz] = useState<any>(null);
-  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
-  const [checkinDoneToday, setCheckinDoneToday] = useState(false);
-  const [checkinHistory, setCheckinHistory] = useState<string[]>([]);
-  const [quizDoneToday, setQuizDoneToday] = useState(false);
-  const [questProgress, setQuestProgress] = useState(0);
+  const [usdtBalance, setUsdtBalance] = useState('0.000');
 
-  const USDT_ADDRESS = "0xc2132D05D31c914a87C6611C10748AEb04B58e8F";
-  const usdtContract = useMemo(() => getContract({ client, chain: polygon, address: USDT_ADDRESS }), []);
+  // 오늘의 머니(표시 금액/상태)
+  const [todayAmount, setTodayAmount] = useState<number>(0);
+  const [todayStatus, setTodayStatus] = useState<'unpaid' | 'paid'>('unpaid');
+  const [todayDateKST, setTodayDateKST] = useState<string>('');
 
-  const fetchUserInfo = async () => {
-    const { data } = await supabase.from("users").select("name, nickname, ref_code").eq("wallet_address", address).maybeSingle();
-    if (data) {
-      setName(data.name || "");
-      setNickname(data.nickname || "");
-      setRefCode(data.ref_code || "");
-    }
-  };
+  // 내 ref_code / 패스 가격 / 일일 리워드
+  const [refCode, setRefCode] = useState<string | null>(null);
+  const [passPrice, setPassPrice] = useState<number | null>(null);
+  const [todayDailyReward, setTodayDailyReward] = useState<number>(0);
 
-  const fetchUSDTBalance = async () => {
-    if (!account?.address) return;
-    try {
-      const result = await balanceOf({ contract: usdtContract, address: account.address });
-      const formatted = (Number(result) / 1e6).toFixed(2);
-      localStorage.setItem("usdt_balance", formatted);
-      setUsdtBalance(`${formatted} USDT`);
-    } catch (err) {
-      console.error("❌ USDT 잔액 조회 실패:", err);
-      setUsdtBalance("0.00 USDT");
-    }
-  };
-
-  const fetchTodayRewards = async () => {
-    const today = getKSTDateString();
-    const { data, error } = await supabase
-      .from("reward_transfers")
-      .select("reward_amount, referral_amount, center_amount")
-      .eq("ref_code", refCode)
-      .eq("reward_date", today);
-    if (error || !data || data.length === 0) {
-      setInvestReward(0);
-      setReferralReward(0);
-      return;
-    }
-    const todayLog = data[0];
-    setInvestReward(Number(todayLog.reward_amount || 0));
-    setReferralReward(Number(todayLog.referral_amount || 0) + Number(todayLog.center_amount || 0));
-  };
-
-  const fetchDailyQuestStatus = async () => {
-    const today = getKSTDateString();
-    const { data } = await supabase
-      .from("daily_quests")
-      .select("type")
-      .eq("ref_code", refCode)
-      .eq("date", today)
-      .eq("status", "completed");
-    const types = data?.map((item) => item.type) || [];
-    let progress = 0;
-    if (types.includes("quiz")) progress += 50;
-    if (types.includes("checkin")) progress += 50;
-    setQuestProgress(progress);
-  };
-
-  const fetchQuizHistory = async () => {
-    const today = getKSTDateString();
-    const { data } = await supabase
-      .from("daily_quests")
-      .select("date")
-      .eq("ref_code", refCode)
-      .eq("type", "quiz")
-      .eq("status", "completed");
-    const dates = data?.map((item) => item.date) || [];
-    setQuizDoneToday(dates.includes(today));
-  };
-
-  const fetchDailyQuiz = async () => {
-    const { data: user } = await supabase.from("users").select("daily_quiz_start_date").eq("wallet_address", address).maybeSingle();
-    let startDate = user?.daily_quiz_start_date ? new Date(user.daily_quiz_start_date) : null;
-    const today = new Date();
-    const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    if (!startDate) {
-      startDate = todayOnly;
-      await supabase.from("users").update({ daily_quiz_start_date: todayOnly.toISOString().split("T")[0] }).eq("wallet_address", address);
-    }
-    const diffDays = Math.floor((todayOnly.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-    const { data: quizList } = await supabase.from("daily_quizzes").select("*").order("id", { ascending: true });
-    const todayQuiz = quizList?.[Math.min(diffDays, quizList.length - 1)];
-    if (todayQuiz?.question) setQuiz(todayQuiz);
-  };
-
-const handleAnswer = async (option: string) => {
-  if (!quiz || isCorrect === true) return;
-
-  setSelectedAnswer(option);
-  const correct = option === quiz.correct_answer;
-  setIsCorrect(correct);
-
-  if (correct) {
-    const today = getKSTDateString();
-
-    // ✅ 이미 퀘스트가 있는지 확인
-    const { data: existing, error } = await supabase
-      .from("daily_quests")
-      .select("id")
-      .eq("ref_code", refCode)
-      .eq("date", today)
-      .eq("type", "quiz")
-      .maybeSingle();
-
-    if (existing) {
-      // ✅ 있다면 update
-      await supabase
-        .from("daily_quests")
-        .update({
-          name,
-          status: "completed",
-        })
-        .eq("id", existing.id);
-    } else {
-      // ✅ 없다면 insert
-      await supabase.from("daily_quests").insert({
-        ref_code: refCode,
-        name,
-        date: today,
-        type: "quiz",
-        status: "completed",
-      });
-    }
-
-    setQuizDoneToday(true);
-    await fetchDailyQuestStatus();
-  }
-};
-
-
-  const fetchCheckinHistory = async () => {
-    const today = getKSTDateString();
-    const { data } = await supabase.from("daily_quests")
-      .select("date")
-      .eq("ref_code", refCode)
-      .eq("type", "checkin")
-      .eq("status", "completed");
-    const dates = data?.map((item) => item.date) || [];
-    setCheckinHistory(dates);
-    setCheckinDoneToday(dates.includes(today));
-  };
-
-const handleCheckin = async () => {
-  if (checkinDoneToday) return;
-
-  const today = getKSTDateString();
-
-  // ✅ 기존 출석 기록이 있는지 확인
-  const { data: existing, error } = await supabase
-    .from("daily_quests")
-    .select("id")
-    .eq("ref_code", refCode)
-    .eq("date", today)
-    .eq("type", "checkin")
-    .maybeSingle();
-
-  if (existing) {
-    // ✅ 있다면 update
-    await supabase
-      .from("daily_quests")
-      .update({
-        name,
-        status: "completed",
-      })
-      .eq("id", existing.id);
-  } else {
-    // ✅ 없다면 insert
-    await supabase.from("daily_quests").insert({
-      ref_code: refCode,
-      name,
-      date: today,
-      type: "checkin",
-      status: "completed",
-    });
-  }
-
-  setCheckinDoneToday(true);
-  setCheckinHistory((prev) => [...prev, today]);
-  await fetchDailyQuestStatus();
-};
+  const usdtContract = useMemo(
+    () => getContract({ client, chain: polygon, address: USDT_ADDRESS }),
+    []
+  );
 
   useEffect(() => {
-    if (account && !balanceCalled.current) {
-      balanceCalled.current = true;
-      fetchUserInfo().then(() => {
-        fetchUSDTBalance();
-        fetchTodayRewards();
-        fetchDailyQuiz();
-        fetchCheckinHistory();
-        fetchQuizHistory();
-        fetchDailyQuestStatus();
-      });
-    }
+    setTodayDateKST(getKSTISOString().slice(0, 10)); // YYYY-MM-DD
+  }, []);
+
+  // 지갑 USDT 잔액
+  useEffect(() => {
+    const fetchUSDTBalance = async () => {
+      if (!account?.address) return;
+      try {
+        const result = await balanceOf({ contract: usdtContract, address: account.address });
+        const formatted = (Number(result) / 1e6).toFixed(3);
+        setUsdtBalance(formatted);
+      } catch (err) {
+        console.error('❌ USDT 잔액 불러오기 실패:', err);
+        setUsdtBalance('0.000');
+      }
+    };
+    fetchUSDTBalance();
+  }, [account, usdtContract]);
+
+  // 오늘의 머니(송금 집계, 상태 계산)
+  useEffect(() => {
+    const fetchTodayMoney = async () => {
+      if (!account?.address) return;
+
+      try {
+        // 1) 내 ref_code
+        const { data: userRow, error: userErr } = await supabase
+          .from('users')
+          .select('ref_code')
+          .eq('wallet_address', account.address.toLowerCase())
+          .maybeSingle();
+
+        if (userErr || !userRow?.ref_code) {
+          setTodayAmount(0);
+          setTodayStatus('unpaid');
+          setRefCode(null);
+          return;
+        }
+        setRefCode(userRow.ref_code);
+
+        const today = getKSTISOString().slice(0, 10);
+
+        // 2) 오늘 reward_transfers (컬럼: total_amount)
+        const { data: rewards, error: rewErr } = await supabase
+          .from('reward_transfers')
+          .select('total_amount, status')
+          .eq('ref_code', userRow.ref_code)
+          .eq('reward_date', today);
+
+        if (rewErr) {
+          console.error('❌ 오늘의 리워드 로드 실패:', rewErr.message);
+          setTodayAmount(0);
+          setTodayStatus('unpaid');
+          return;
+        }
+
+        const rows = (rewards ?? []) as RewardRow[];
+
+        // 합계
+        const total = rows.reduce((sum, r) => sum + (r.total_amount || 0), 0);
+        setTodayAmount(total);
+
+        // 상태: sent 또는 success → 지급완료, failed → 미지급
+        const hasPaid = rows.some((r) => r.status === 'sent' || r.status === 'success');
+        setTodayStatus(hasPaid ? 'paid' : 'unpaid');
+      } catch (e) {
+        console.error('❌ 오늘의 머니 처리 오류:', e);
+        setTodayAmount(0);
+        setTodayStatus('unpaid');
+        setRefCode(null);
+      }
+    };
+
+    fetchTodayMoney();
   }, [account]);
 
-  return (
-  <main className="w-full min-h-screen bg-[#f5f7fa] pt-0 pb-20">
-  <TopBar />
-      <div className="max-w-[500px] mx-auto px-3 pt-2 space-y-2">
-        <div className="w-full rounded-xl overflow-hidden shadow border bg-white">
-          <img src="/ads/ad1.png" alt="광고" className="w-full h-24 object-cover" />
-        </div>
+  // 패스 가격
+  useEffect(() => {
+    const fetchPassPrice = async () => {
+      if (!refCode) {
+        setPassPrice(null);
+        return;
+      }
+      try {
+        const { data, error } = await supabase
+          .from('harumoney_passes')
+          .select('price_usdt, pass_code, is_active, activated_at')
+          .eq('ref_code', refCode)
+          .eq('is_active', true)
+          .order('activated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-        <section className="bg-white rounded-2xl shadow-lg border border-gray-100 px-5 py-5">
-          <h3 className="text-sm font-bold text-gray-800 mb-2">일일 퀘스트</h3>
-          <div className="relative w-full bg-gray-200 h-5 rounded-full overflow-hidden">
-            <div className="absolute top-0 left-0 h-full bg-blue-500 rounded-full transition-all duration-500" style={{ width: `${questProgress}%` }}></div>
+        if (error) {
+          console.error('❌ 패스 가격 로드 실패:', error.message);
+          setPassPrice(null);
+          return;
+        }
+        const row = (data ?? null) as PassRow | null;
+        setPassPrice(row?.price_usdt ?? null);
+      } catch (e) {
+        console.error('❌ 패스 가격 처리 오류:', e);
+        setPassPrice(null);
+      }
+    };
+    fetchPassPrice();
+  }, [refCode]);
+
+  // 일일 리워드(daily_reward_usdt)
+  useEffect(() => {
+    const fetchDaily = async () => {
+      if (!refCode) {
+        setTodayDailyReward(0);
+        return;
+      }
+      try {
+        const { data } = await supabase
+          .from('harumoney_passes')
+          .select('daily_reward_usdt')
+          .eq('ref_code', refCode)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        setTodayDailyReward(Number(data?.daily_reward_usdt ?? 0));
+      } catch (e) {
+        console.error('❌ daily_reward_usdt 로드 실패:', e);
+        setTodayDailyReward(0);
+      }
+    };
+    fetchDaily();
+  }, [refCode]);
+
+  // ✅ 교환 버튼 클릭 시: 잔액을 쿼리와 세션에 함께 전달
+  const goSwap = () => {
+    const raw = Number(usdtBalance || '0');
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('usdt_balance', String(raw));
+    }
+    router.push(`/home/swap?usdt=${raw}`);
+  };
+
+  return (
+    <div className="min-h-screen bg-[#f5f7fa] pb-28">
+      {/* 상단바 */}
+      <TopBar />
+
+      {/* COINW 홍보 배너 */}
+      <div className="px-0 mt-2">
+        <AdBanner />
+      </div>
+
+      <div className="px-4 mt-4 space-y-6">
+        {/* 오늘의 머니 카드박스 */}
+        <TodayMoneyCard
+          dateKST={todayDateKST}
+          scheduleText="매일 10:00 KST 전"
+          amount={todayAmount}                 // fallback
+          dailyRewardUSDT={todayDailyReward}   // 큰 숫자 자리에 표시
+          status={todayStatus}                 // 'unpaid' | 'paid'
+          detailHref={refCode ? `/rewards/transfers?range=30d&ref=${refCode}` : undefined}
+        />
+
+        {/* USDT 자산 카드 */}
+        <section className="bg-gradient-to-r from-cyan-400 to-indigo-400 text-white rounded-2xl p-5 shadow-lg">
+          <div className="text-sm font-semibold mb-1 text-white/100">보유 자산</div>
+          <div className="text-3xl font-bold mb-5 tracking-wide flex items-center gap-1">
+            {usdtBalance} <span className="text-lg font-semibold">USDT</span>
           </div>
-          <div className="mt-2 flex justify-center">
-            <span className="bg-blue-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">{questProgress}% 달성</span>
+          <div className="flex justify-between text-sm font-semibold gap-2">
+            <button
+              onClick={goSwap}  // ← 수정: 잔액 전달
+              className="flex-1 bg-white text-cyan-600 rounded-full px-5 py-2 shadow-md border border-cyan-200 transition hover:-translate-y-0.5 active:shadow-inner"
+            >
+              교환
+            </button>
+            <button
+              onClick={() => router.push('/home/send')}
+              className="flex-1 bg-white text-cyan-600 rounded-full px-5 py-2 shadow-md border border-cyan-200 transition hover:-translate-y-0.5 active:shadow-inner"
+            >
+              보내기
+            </button>
           </div>
         </section>
 
-        {quiz && (
-          <section className="bg-white rounded-2xl shadow-lg border border-gray-100 px-5 py-6">
-            <h3 className="text-base text-blue-500 font-bold mb-1">데일리 퀴즈</h3>
-            <p className="text-xl font-bold text-gray-900 mt-2 text-left">{quiz.question}</p>
-            <div className="space-y-3 mt-6">
-              {[quiz.option_1, quiz.option_2, quiz.option_3].map((option: string, idx: number) => {
-                const isSelected = selectedAnswer === option;
-                const isAnswer = quiz.correct_answer === option;
-                let buttonClass = "bg-gray-100 text-gray-800 border border-gray-200";
-                let icon = "⬜️";
-                if (selectedAnswer) {
-                  if (option === quiz.correct_answer) {
-                    buttonClass = "bg-green-100 border-green-500 text-green-700";
-                    icon = "✅";
-                  } else if (option === selectedAnswer && !isAnswer) {
-                    buttonClass = "bg-red-100 border-red-500 text-red-700";
-                    icon = "❌";
-                  }
-                }
-                return (
-                  <button
-                    key={idx}
-                    onClick={() => handleAnswer(option)}
-                    disabled={isCorrect === true}
-                    className={`w-full flex items-center justify-between rounded-xl px-4 py-4 text-base font-medium shadow-sm transition-all duration-300 ${buttonClass}`}
-                  >
-                    <span>{option}</span>
-                    <span className="text-xl">{icon}</span>
-                  </button>
-                );
-              })}
-            </div>
-            {selectedAnswer && (
-              <div className="mt-4 text-center text-base font-semibold">
-                {isCorrect ? (
-                  <span className="text-green-600">정답입니다! 🎉</span>
-                ) : (
-                  <div>
-                    <p className="text-red-600 font-semibold">오답이에요</p>
-                    <p className="text-red-600 text-sm mt-1">다시 선택해주세요</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </section>
-        )}
-
-        <section className="bg-white rounded-2xl shadow-lg border border-gray-100 px-5 py-6">
-          <h3 className="text-sm font-semibold text-blue-600 mb-1">📅 출석체크</h3>
-          <p className="text-sm text-gray-700 mb-4">10일 동안 매일 출석 체크하고 리워드 챙겨가세요!</p>
-          <div className="grid grid-cols-5 gap-3 mb-4">
-            {[...Array(10)].map((_, idx) => {
-              const checked = idx < checkinHistory.length;
-              return (
-                <div key={idx} className="flex flex-col items-center justify-center w-full aspect-square">
-                  <img
-                    src={checked ? "/icons/check_active.png" : "/icons/check_inactive.png"}
-                    alt="check"
-                    className="w-10 h-10 mb-1"
-                  />
-                  <div className="text-[11px] text-gray-700">{idx + 1}일차</div>
-                </div>
-              );
-            })}
+        {/* 보유 PASS 카드 박스 */}
+        <section className="bg-white rounded-xl shadow overflow-hidden">
+          <h3 className="text-base font-bold text-blue-600 px-4 pt-4">보유 패스</h3>
+          <div className="mt-3">
+            <img src="/pass.png" alt="PASS 카드" className="w-full h-auto object-cover" />
           </div>
-          {!checkinDoneToday ? (
-            <button
-              onClick={handleCheckin}
-              className="w-full bg-blue-500 text-white text-sm font-semibold py-2 rounded-lg"
-            >
-              오늘 출석하기
-            </button>
-          ) : (
-            <div className="text-center text-green-600 font-semibold">
-              오늘 출석 완료!<span className="text-sm text-blue-600"> +10포인트</span>
+          <div className="px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div className="font-semibold text-base">하루머니 패스</div>
+              <div className="text-sm font-bold text-gray-700">
+                {typeof passPrice === 'number' ? passPrice : '--'} USDT
+              </div>
             </div>
-          )}
+          </div>
         </section>
       </div>
+
       <BottomNav />
-    </main>
+    </div>
   );
 }

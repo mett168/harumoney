@@ -203,9 +203,6 @@ export default function MyPage() {
             <h2 className="text-md font-semibold text-gray-700 mb-1 pl-2">내역관리</h2>
             <div className="bg-white rounded-xl shadow border text-sm divide-y divide-gray-200">
               {[
-                { label: "NFT 구매 내역", path: "/mypage/history/nft-purchase" },
-                { label: "NFT 양도 내역", path: "/mypage/history/nft-transfer" },
-                { label: "NFT 해지 내역", path: "/mypage/history/nft-burn" },
                 { label: "USDT 입출금 내역", path: "/mypage/history/usdt" },
               ].map((item, idx) => (
                 <button

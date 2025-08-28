@@ -11,19 +11,18 @@ export default function AdBanner() {
   useEffect(() => {
     const interval = setInterval(() => {
       setIndex((prev) => (prev + 1) % ads.length);
-    }, 4000); // 4초마다 전환
+    }, 4000);
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <div className="px-4 mb-2">
-      <Image
-        src={ads[index]}
-        alt={`광고 배너 ${index + 1}`}
-        width={500}
-        height={100}
-        className="w-full rounded-lg object-cover"
-      />
-    </div>
+    // ✅ 여백 제거
+    <Image
+      src={ads[index]}
+      alt={`광고 배너 ${index + 1}`}
+      width={500}
+      height={100}
+      className="w-full object-cover"
+    />
   );
 }

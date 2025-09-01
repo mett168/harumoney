@@ -186,6 +186,15 @@ export default function WalletPage() {
     fetchDaily();
   }, [refCode]);
 
+  // ✅ 상세보기 클릭 → 최신 refCode로 바로 이동
+  const handleDetailClick = () => {
+    if (!refCode) {
+      alert('내 초대코드를 찾을 수 없어요. 로그인/지갑을 확인해 주세요.');
+      return;
+    }
+    router.push(`/rewards/transfers?range=30d&ref=${refCode}`);
+  };
+
   // ✅ 교환 버튼 클릭 시: 잔액을 쿼리와 세션에 함께 전달
   const goSwap = () => {
     const raw = Number(usdtBalance || '0');
@@ -213,7 +222,7 @@ export default function WalletPage() {
           amount={todayAmount}                 // fallback
           dailyRewardUSDT={todayDailyReward}   // 큰 숫자 자리에 표시
           status={todayStatus}                 // 'unpaid' | 'paid'
-          detailHref={refCode ? `/rewards/transfers?range=30d&ref=${refCode}` : undefined}
+          onClickDetail={handleDetailClick}    // ✅ 여기만 넘기면 동작
         />
 
         {/* USDT 자산 카드 */}
@@ -224,7 +233,7 @@ export default function WalletPage() {
           </div>
           <div className="flex justify-between text-sm font-semibold gap-2">
             <button
-              onClick={goSwap}  // ← 수정: 잔액 전달
+              onClick={goSwap}
               className="flex-1 bg-white text-cyan-600 rounded-full px-5 py-2 shadow-md border border-cyan-200 transition hover:-translate-y-0.5 active:shadow-inner"
             >
               교환

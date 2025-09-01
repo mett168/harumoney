@@ -2,8 +2,8 @@ import './globals.css';
 import Providers from '@/components/Providers';
 
 export const metadata = {
-  title: 'HaruReward',
-  description: '하루리워드',
+  title: 'Harumoney',
+  description: '하루머니',
   manifest: '/manifest.json',
 };
 
